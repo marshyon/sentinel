@@ -1,0 +1,23 @@
+#!/home/jon/local/bin/perl -w
+
+use strict;
+use lib '../lib';
+
+$| = 1;
+
+use Data::Dumper;
+
+use Sentinel;
+
+my $s = Sentinel->new( 
+                       debug => 1,
+                       max_concurrent => 4,
+                       config_file => 'main.cfg',
+                     );
+$s->init_task_list();
+$s->run();
+
+print "debug is :: " . $s->debug() . "\n";
+print "max_concurrent is :: " . $s->max_concurrent() . "\n";
+
+exit 0;
