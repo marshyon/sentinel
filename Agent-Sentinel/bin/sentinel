@@ -9,11 +9,7 @@ use Data::Dumper;
 
 use Sentinel;
 
-my $s = Sentinel->new( 
-                       debug => 1,
-                       max_concurrent => 4,
-                       config_file => 'main.cfg',
-                     );
+my $s = Sentinel->new( config_file => 'bin/sentinel.cfg' );
 $s->init_task_list();
 $s->run();
 
