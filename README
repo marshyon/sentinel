@@ -11,6 +11,12 @@ Alpha release
 
 Barely working or usefull, a starting point only
 
+see bin/sentinel for a typical executable used to invoke sentinel
+
+see bin/sentinel.cfg.EXAMPLE for general configuration 
+
+see lib/Sentinel.pm for programmatic usage
+
 AUTHOR
        Jon Brookes "<jon.brookes@ajbcontracts.co.uk>"
 
