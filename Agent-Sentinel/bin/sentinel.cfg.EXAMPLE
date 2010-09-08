@@ -1,0 +1,163 @@
+[main]
+
+# enable debug by setting to 1 to get verbose logging
+debug = 0
+
+# disable by setting to 0 to run in foreground
+# default is to run in 'background' ( as a daemon )
+daemon = 1
+
+# default interval ( in seconds ) of time to elapse
+# between the running of each task ( see tasks )
+interval = 300
+
+# location of status, run and log files
+# - these will be relative to the directory
+#   from which sentinel is invoked or else
+#   must be entered here as an absolute path
+status_file = sentinel_status_file
+status_direcory = data/status
+
+# a process id file contains the running process id
+# and if not defined, defaults to the values below
+# 
+# this file will be used to control sentinel - by 
+# sending signals such as KILL or HUP
+#
+pid_file_dir = /var/run/sentinel
+pid_file = senintel.pid
+
+# status files contain the current results
+# from each task
+#
+# updates are made each time a task completes
+#
+# formats for status file data to be created
+# * yml
+#   yet another markup ( YAML )
+# * json
+#   Javascript markup - often used by web
+#   applications
+# * xml
+#   Extensible Markup ( XML )
+# * tmpl
+#   for inclusion into other content, such as
+#   web pages and using a simple template file
+#   - see ./bin of this module  distribution 
+#     for an example of this
+#
+# sentinel will always create MLDBM status
+# files and uses this internally to record and
+# retreive status and configuration datas
+status_format = yml
+status_format = json
+status_format = xml
+status_format = tmpl
+
+# if daemon ( background ) mode is set, 
+# a user / group may be optionally defined
+#
+# as system processes are typically invoked by 
+# user 'root' on boot up, thsi permits for 
+# the process to run as a user / group with 
+# lower privilege 
+# 
+# if not set, the process will run as the user
+# that invoked the process
+#
+user = nobody
+group = nobody
+
+[plugins]
+
+# search path under lib/Agent/Sentinel/Plugin/
+# to look for and load plugins where 
+# * Core 
+#   is a directory containg plugin(s) that ship
+#   with this module
+# * YourOwnPlugins
+#   is a directory structure containing plugins
+#   that you have added and will not be altered
+#   by uprades to this module
+#   
+# there can be zero or more extra plugin directories
+# like this but there must be at least 'Core'
+# 
+search = Core
+search = YourOwnPlugins
+
+# tasks are defined by section names that start with 
+# the string 'task ' followed by a number or word 
+# for example :
+#
+# [task 10]
+#
+# ( a space ' ' must be included after the word 
+# 'task' ) 
+#
+# tasks are sorted alpha numerically 
+# so the order in which each task first runs is 
+# dictated by this sort order
+
+[task 1]
+
+#
+# minimal task configuration ....
+#
+
+action = /usr/bin/some_other_command_or_script
+plugin = SystemCommand
+interval = 3
+description = this is the result of a sentinel run command [/usr/bin/some....]
+
+[task 2]
+
+#
+# more comprehensive task configuration .....
+#
+
+# each task *must* have an action, without an action
+# the task will be be ignored
+#
+# an action is typically a system command but may be
+# an instruction passed to a perl plugin
+#
+action = /usr/bin/some_command_or_script
+
+# each task *must* have a plugin allocated 
+# see docs of this module for a full list of supported
+# plugins and how to add your own plugins
+plugin = SystemCommand
+
+# each task has a time interval that defines the
+# time in seconds to wait between each run
+# 
+# if not set for each task, a global default of 300
+# seconds is used / else the global default in 'main'
+# of this config file ( above )
+interval = 60
+
+# define here a description or else a default of:
+# 'description of <task name or number>' will be recorded
+# in status reports
+description = description of task 1
+
+# there can be other parameters defined for each
+# task depending upon the type of plugin used
+# 
+# any parameters further to those above will be passed
+# to the plugin and the plugin has to know what to do
+# with each one
+#
+# SystemCommand uses the following extra parameter 
+# definitions:
+#
+paramater = -D -s --other-parameter
+#
+# ... where command line parameters are set
+#
+working directory = /some/directory/to cd to
+#
+# ... where the directory into which the process
+#     is to start from
+#
