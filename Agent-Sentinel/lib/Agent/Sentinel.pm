@@ -4,12 +4,18 @@ use Moose;    # automatically turns on strict and warnings
 use Module::Pluggable require => 1, inner => 0;
 use POE qw(Wheel::Run Filter::Reference);
 use Config::Std;
+use Net::Server::Daemonize qw(daemonize);
 
 use Data::Dumper;
 
-has 'debug'          => ( is => 'rw' );
-has 'max_concurrent' => ( is => 'rw' );
 has 'config_file'    => ( is => 'rw' );
+has 'debug'          => ( is => 'ro' );
+has 'daemon'         => ( is => 'ro' );
+has 'config'         => ( is => 'ro' );
+has 'interval'       => ( is => 'ro' );
+has 'pid_file'       => ( is => 'ro' );
+has 'user'           => ( is => 'ro' );
+has 'group'          => ( is => 'ro' );
 
 my $MAX;
 my @tasks = qw(one two three four five six seven eight nine ten);
@@ -48,80 +54,103 @@ Perhaps a little code snippet.
 sub function1 {
 }
 
-=head2 function2
-
-=cut
 
 sub function2 {
 }
 
+sub load_config {
+    my $file = shift;
+    read_config $file => my %cfg;
+    return \%cfg;
+}
 
-
-sub init_task_list {
-
+sub init {
     my $self = shift;
+
+    # load config file and store for object access
+    $self->{'config'} = load_config( $self->config_file() );
+
+    $self->{'debug'} = ${$self->config}{'main'}{'debug'} || 0;
+    $self->{'daemon'} = ${$self->config}{'main'}{'daemon'};
+    $self->{'user'} = ${$self->config}{'main'}{'user'};
+    $self->{'group'} = ${$self->config}{'main'}{'group'};
+    $self->{'interval'} = ${$self->config}{'main'}{'interval'} || 300;
+    ${$self->config}{'main'}{'pid_file_dir'} .= '/' unless ( ${$self->config}{'main'}{'pid_file_dir'} =~ m{/$} );
+
+    $self->{'pid_file'} = ${$self->config}{'main'}{'pid_file_dir'} . ${$self->config}{'main'}{'pid_file'};
+
+    #my $cf = $self->config_file();
+    #%cfg = load_config($cf);
+
 
     # load a list of plugins and save to a hash for lookup
     #
-    map {
-        if ( $_ =~ m{Sentinel::Plugin::(.+)} )
-        {
-            $self->{'plugins_hash'}->{$1}++;
-            print ">>DEBUG>>$_\n";
-            $sentinel_plugin = $_->new();
-        }
-    } $self->plugins();
-
-    print Dumper($self->plugins());
-
-    # load config file and store for object access
-    #
-    read_config $self->config_file() => my %cfg;
-    $self->{'config'} = \%cfg;
-
-    # store global 'default' config values from config for later use
-    #
-    $self->max_concurrent(
-        $self->{'config'}->{'sentinel'}{'max_concurrent_jobs'} );
-    $MAX = $self->max_concurrent();
-    $self->debug( $self->{'config'}->{'sentinel'}{'debug'} );
-    print "config is [" . $self->config_file . "]\n" if $self->debug();
-
-    # validate each section in config starting 'task <num>' to have
-    # a plugin installed of name 'type' in config
-    #
-    foreach my $section ( keys( %{ $self->{'config'} } ) ) {
-        next unless ( $section =~ m{^task \d+} );
-        if ( $self->{'plugins_hash'}
-            ->{ $self->{'config'}->{$section}->{'type'} } )
-        {
-            print "found plugin for [[$section]]\n" if $self->debug();
-            foreach my $plugin_param ( keys %{ $self->{'config'}->{$section} } )
-            {
-                print "\tparam : $plugin_param => "
-                  . $self->{'config'}->{$section}->{$plugin_param} . "\n" if $self->debug();
-            }
-        }
-    }
+    #map {
+    #    if ( $_ =~ m{Sentinel::Plugin::(.+)} )
+    #    {
+    #        $self->{'plugins_hash'}->{$1}++;
+    #        
+    #        $sentinel_plugin = $_->new();
+    #    }
+    #} $self->plugins();
+#
+#
+#    # store global 'default' config values from config for later use
+#    #
+#    $self->max_concurrent(
+#        $self->{'config'}->{'sentinel'}{'max_concurrent_jobs'} );
+#    $MAX = $self->max_concurrent();
+#    $self->debug( $self->{'config'}->{'sentinel'}{'debug'} );
+#    print "config is [" . $self->config_file . "]\n" if $self->debug();
+#
+#    # validate each section in config starting 'task <num>' to have
+#    # a plugin installed of name 'type' in config
+#    #
+#    foreach my $section ( keys( %{ $self->{'config'} } ) ) {
+#        next unless ( $section =~ m{^task \d+} );
+#        if ( $self->{'plugins_hash'}
+#            ->{ $self->{'config'}->{$section}->{'type'} } )
+#        {
+#            print "found plugin for [[$section]]\n" if $self->debug();
+#            foreach my $plugin_param ( keys %{ $self->{'config'}->{$section} } )
+#            {
+#                print "\tparam : $plugin_param => "
+#                  . $self->{'config'}->{$section}->{$plugin_param} . "\n" if $self->debug();
+#            }
+#        }
+#    }
 }
 
 sub run {
 
     my $self = shift;
 
-    $self->{'SENTINEL_DATA'} = \{ 'one' => 1, 'two' => 2, 'three' => 10 };
-    POE::Session->create(
-    inline_states => {
-    _start      => sub {  $self->start_tasks( $_[KERNEL], $_[HEAP] ) ; },
-    interval    => sub {  $self->time_check( $_[KERNEL], $_[HEAP], $_[ARG0] ) ; },
-    next_task   => sub {  $self->start_tasks( $_[KERNEL], $_[HEAP] ) ; },
-    task_result => sub {  $self->handle_task_result( $_[ARG0] ) ; },
-    task_done   => sub {  $self->handle_task_done( $_[KERNEL], $_[HEAP], $_[ARG0] ) ; },
-    task_debug  => sub {  $self->handle_task_debug( $_[ARG0] ) ; },
-    sig_child   => \&sig_child,
+    if($self->daemon) {
+
+        daemonize(
+            $self->user(),
+            $self->group(),
+            $self->{'pid_file'},
+        );
+
+        while(1) {
+            sleep 1;
+        }
     }
-    );
-    $poe_kernel->run();
+
+    #$self->{'SENTINEL_DATA'} = \{ 'one' => 1, 'two' => 2, 'three' => 10 };
+    #POE::Session->create(
+    #inline_states => {
+    #_start      => sub {  $self->start_tasks( $_[KERNEL], $_[HEAP] ) ; },
+    #interval    => sub {  $self->time_check( $_[KERNEL], $_[HEAP], $_[ARG0] ) ; },
+    #next_task   => sub {  $self->start_tasks( $_[KERNEL], $_[HEAP] ) ; },
+    #task_result => sub {  $self->handle_task_result( $_[ARG0] ) ; },
+    #task_done   => sub {  $self->handle_task_done( $_[KERNEL], $_[HEAP], $_[ARG0] ) ; },
+    #task_debug  => sub {  $self->handle_task_debug( $_[ARG0] ) ; },
+    #sig_child   => \&sig_child,
+    #}
+    #);
+    #$poe_kernel->run();
 }
 
 
