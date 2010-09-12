@@ -1,0 +1,10 @@
+#!perl 
+
+use Agent::Sentinel;
+
+my $config_file = shift;
+
+my $s = Agent::Sentinel->new( config_file => $config_file );
+$s->init();
+$s->run();
+
