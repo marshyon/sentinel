@@ -1,4 +1,4 @@
-use Test::More tests => 7;
+use Test::More tests => 8;
 use Config::Std;
 
 # PURPOSE OF TEST
@@ -51,14 +51,16 @@ my $interval = $s->interval();
 my $user     = $s->user();
 my $group    = $s->group();
 my $pidfile  = $s->pid_file();
+my $status_dir  = $s->status_dir();
 
-# perform checks on our actual results
+# run checks on our actual results
 ok( $debug == 0,      'test debug value' );
 ok( $daemon == 0,     'test daemon value' );
 ok( $interval == $interval_default, 'test interval value' );
 ok( $group eq $ENV{'USER'}, 'test group value' );
 ok( $user  eq $ENV{'USER'}, 'test user value' );
 ok( $pidfile eq 't/run/senintel.pid', 'test pidfile ' . $pidfile );
+ok( $status_dir eq 't/status', 'test status dir [' . $status_dir . ']' );
 
 
 
