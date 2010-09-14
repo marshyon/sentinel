@@ -1,5 +1,7 @@
 #!perl 
 
+$| = 1;
+
 use Agent::Sentinel;
 
 my $config_file = shift;
