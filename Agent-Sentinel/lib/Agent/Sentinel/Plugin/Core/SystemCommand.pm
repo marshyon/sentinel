@@ -1,13 +1,16 @@
 package Agent::Sentinel::Plugin::Core::SystemCommand;
 
 use Moose; # automatically turns on strict and warnings
+use Data::Dumper;
 
-has 'cmd' => (is => 'rw' );
+has 'cfg' => (is => 'rw' );
+has 'task' => (is => 'rw' );
 
 sub run {
       my $self = shift;
-      return "running [" . $self->cmd() . "]\n";
-      #return "running nothing";
+      # be busy for a bit
+      sleep 1;
+      return "SystemCommand task[" . $self->task . "] [" . $self->{'cfg'}->{'command'} . "]";
 }
 
 1;
