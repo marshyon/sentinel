@@ -1,12 +1,16 @@
 package Agent::Sentinel;
 
-use Moose;    # automatically turns on strict and warnings
+use Moose;
+
 use Module::Pluggable require => 1, inner => 0;
+
 use POE qw(Wheel::Run Filter::Reference);
 use Config::Std;
 use Net::Server::Daemonize qw(daemonize);
 use YAML;
 use Data::Dumper;
+use List::Util qw(first);
+use Cwd;
 
 has 'config_file' => ( is => 'rw' );
 has 'debug'       => ( is => 'ro' );
@@ -17,10 +21,12 @@ has 'pid_file'    => ( is => 'ro' );
 has 'user'        => ( is => 'ro' );
 has 'group'       => ( is => 'ro' );
 has 'status_dir'  => ( is => 'ro' );
+has 'sd'          => ( is => 'rw' );
 
 my $MAX;
 my @tasks = qw(one two three four five six seven eight nine ten);
 my $sentinel_plugin;
+my @sdir = ();
 
 =head1 NAME
 
@@ -51,12 +57,6 @@ Perhaps a little code snippet.
 
 =cut
 
-sub function1 {
-}
-
-sub function2 {
-}
-
 sub load_config {
     my $file = shift;
     read_config $file => my %cfg;
@@ -66,8 +66,13 @@ sub load_config {
 sub init {
     my $self = shift;
 
+    # store current working directory in 'STACK' for later use
+    my $working_dir = getcwd;
+    $self->{'STACK'}->{'working_dir'} = "$working_dir/t/status/status.yaml";
+
     # load config file and store for object access
     $self->{'cfg'} = load_config( $self->config_file() );
+    @sdir = @{ ${ $self->cfg }{'main'}{'search_dir'} };
 
     $self->{'debug'}    = ${ $self->cfg }{'main'}{'debug'} || 0;
     $self->{'daemon'}   = ${ $self->cfg }{'main'}{'daemon'};
@@ -82,53 +87,67 @@ sub init {
         ${ $self->cfg }{'main'}{'pid_file_dir'}
       . ${ $self->cfg }{'main'}{'pid_file'};
 
-    # load a list of plugins and save to a hash for lookup
-    #
-    map {
-
-        $sentinel_plugin = $_->new();
-
-    } $self->plugins();
 
     # validate each section in config starting 'task <num>' to have
     # a plugin installed of name 'type' in config
     #
+
+    foreach my $p ($self->plugins()) {
+        print ">>DEBUG>>$0>>FOUND PLUGIN $p\n";
+    }
+
+    SECTION:
     foreach my $section ( keys( %{ $self->{'cfg'} } ) ) {
 
-        next unless ( $section =~ m{^task \d+} );
-
-        {
-            #$self->{'SENTINEL_DATA'}->{'tasks'}->{$section}->{'interval'} =
-            #  $self->{'cfg'}{$section}->{'interval'};
-            #$self->{'SENTINEL_DATA'}->{'tasks'}->{$section}->{'type'} =
-            #  $self->{'cfg'}{$section}->{'type'};
-            #$self->{'SENTINEL_DATA'}->{'tasks'}->{$section}->{'command'} =
-            #  $self->{'cfg'}{$section}->{'command'};
-            #$self->{'SENTINEL_DATA'}->{'tasks'}->{$section}->{'parameters'} =
-            #  $self->{'cfg'}{$section}->{'parameters'};
-
-            my %section_config = ();
-            print ">>found plugin for [[$section]]\n" ;
-            foreach my $plugin_param ( keys %{ $self->{'cfg'}->{$section} } )
-            {
-                print "\t-->param : $plugin_param => "
-                  . $self->{'cfg'}->{$section}->{$plugin_param} . "\n";
-                $section_config{ $plugin_param } = $self->{'cfg'}->{$section}->{$plugin_param};
-            }
-            $self->{'SENTINEL_DATA'}->{'tasks'}->{$section}->{'config'} = \%section_config;
-            
+        # skip sections not beginning with [task ....]
+        next SECTION unless ( $section =~ m{^task \d+} );
+        # find plugins of type config 'type'
+        my $config_plugin_name = $self->{'cfg'}{$section}->{'type'};
+        # skip any configs without a configured type
+        if ( ! $config_plugin_name ) {
+            warn "WARNING :: NO PLUGIN found for [$section] type = '<plugin type - see docs>'\n";
+            next SECTION ;
         }
+        # lookup plugin name from this objects plugins matching 'type'
+        my $plugin_name =
+          first { $_ =~ m{.+?$config_plugin_name$}mxs } $self->plugins();
+        # skip any configured jobs that do not have a matching 
+        # plugin to their type
+        if ( ! $plugin_name ) {
+            warn "WARNING :: NO PLUGIN found for [$section] type = $config_plugin_name\n" . Dumper($self->plugins());
+            next SECTION ;
+        }
+
+        # save for this task its plugin name for later instantiation
+        $self->{'STACK'}->{'tasks'}->{$section}->{'task_plugin'} =
+          $plugin_name;
+
+        # extract the config for this task, store into a hash
+        my %section_config = ();
+        foreach my $plugin_param ( keys %{ $self->{'cfg'}->{$section} } ) {
+
+            $section_config{$plugin_param} =
+              $self->{'cfg'}->{$section}->{$plugin_param};
+        }
+        # copy config hash to objects stash for this task for passing
+        # to plugin when instantiated and run
+        $self->{'STACK'}->{'tasks'}->{$section}->{'config'} =
+          \%section_config;
+
     }
 }
 
+# starts the POE Session - this is like 'main' where the whole of POE
+# is controlled by each 'inline_state(s)' there after
 sub run {
 
     my $self = shift;
 
+
     if ( $self->daemon ) {
-
-        daemonize( $self->user(), $self->group(), $self->{'pid_file'}, );
-
+        daemonize( $self->user(), 
+        $self->group(), 
+        $self->{'pid_file'}, );
     }
 
     POE::Session->create(
@@ -158,34 +177,44 @@ sub start_tasks {
     my ( $self, $k, $h ) = @_;
 
   CONFIG:
-    foreach my $config_task ( keys( %{ $self->{'SENTINEL_DATA'}->{'tasks'} } ) )
+    foreach my $config_task ( keys( %{ $self->{'STACK'}->{'tasks'} } ) )
     {
 
         my $running =
-          $self->{'SENTINEL_DATA'}->{'tasks'}->{$config_task}->{'running'} || 0;
+          $self->{'STACK'}->{'tasks'}->{$config_task}->{'running'} || 0;
         my $last_ran =
-          $self->{'SENTINEL_DATA'}->{'tasks'}->{$config_task}->{'last_ran'}
+          $self->{'STACK'}->{'tasks'}->{$config_task}->{'last_ran'}
           || 0;
         my $interval =
-          $self->{'SENTINEL_DATA'}->{'tasks'}->{$config_task}->{'config'}->{'interval'}
+          $self->{'STACK'}->{'tasks'}->{$config_task}->{'config'}
+          ->{'interval'}
           || 300;
 
         # skip runnig tasks
         next CONFIG if $running;
 
-        # skip jobs that are not scheduled to run yet
+        # now run only jobs that are scheduled to run 
         my $now     = time();
         my $elapsed = $now - $last_ran;
+
         if ( $elapsed >= $interval ) {
 
-# TODO : add to do_stuff params of config 
-# bar expected ( so all of config file 
-# entry gets passed for plugin to use 
-# whatever has been given to it )
-            my %test_hash = ( 'a' => 'one', 'b' => 'two', 'c' => '99' );
+            # it is time for this task to run
+
+            my $sentinel_plugin =
+              $self->{'STACK'}->{'tasks'}->{$config_task}
+              ->{'task_plugin'}->new();
+            my $sentinel_config =
+              $self->{'STACK'}->{'tasks'}->{$config_task}->{'config'};
+
+            # POE's Wheel::Run takes a reference to a subroutine which will
+            # itself be spawned as a child process - we call this sub here
+            # 'child_process' 
+
             my $task = POE::Wheel::Run->new(
                 Program => sub {
-                    do_stuff( $config_task, $sentinel_plugin, $self->{'SENTINEL_DATA'}->{'tasks'}->{$config_task}->{'config'} );
+                    child_process ( $config_task, $sentinel_plugin,
+                        $sentinel_config );
                 },
                 StdoutFilter => POE::Filter::Reference->new(),
                 StdoutEvent  => "task_result",
@@ -195,21 +224,14 @@ sub start_tasks {
             my $poe_id = $task->ID;
             $h->{task}->{$poe_id} = $task;
             $k->sig_child( $task->PID, "sig_child" );
-            $self->{'SENTINEL_DATA'}->{'poe_ids'}->{$config_task} = $poe_id;
-            $self->{'SENTINEL_DATA'}->{'tasks'}->{$config_task}->{'running'} =
+            $self->{'STACK'}->{'poe_ids'}->{$config_task} = $poe_id;
+            $self->{'STACK'}->{'tasks'}->{$config_task}->{'running'} =
               1;
         }
     }
+
+    # create an alarm to set off 'time_check' 1 second from now
     $k->alarm( time_check => time() + 1, 0 );
-
-    # heap task hash is iterated over for jobs
-    # we use a hash all of our own, separate to this called 'SENTINEL_DATA'
-    # (for want of a better name at the moment)
-
-    # Run Wheel is created and stored into heap and task->ID needs to be
-    # recorded against this job by a hash of job => ids where the ID
-    # changes each time a new job is started - so we keep track of the current
-    # POE internal ID against each of our config'ed tasks
 
 }
 
@@ -223,21 +245,16 @@ sub time_tick {
 
     print '.';
 
-    #print "<time tick $a";
-    #foreach ( keys( %{ $h->{task} } ) ) {
-    #    print "[$_]";
-    #}
-    #print "> ";
     YAML::DumpFile(
-        $self->{status_dir} . "/status.yaml",
-        $self->{'SENTINEL_DATA'}->{'tasks'}
+        $self->{'STACK'}->{'working_dir'},
+        $self->{'STACK'}->{'tasks'}
     );
     $k->alarm( time_check => time() + 1, $a + 1 );
     $self->start_tasks( $k, $h );
 
 }
 
-sub do_stuff {
+sub child_process {
 
     binmode(STDOUT);
     my $task            = shift;
@@ -263,7 +280,7 @@ sub handle_task_result {
     my ( $self, $a ) = @_;
     my $result = $a;
     print "\n\nResult for $result->{task}: [" . $result->{status} . "]\n";
-    $self->{'SENTINEL_DATA'}->{'tasks'}->{ $result->{task} }->{'result'} =
+    $self->{'STACK'}->{'tasks'}->{ $result->{task} }->{'result'} =
       $result->{status};
 }
 
@@ -275,12 +292,11 @@ sub handle_task_debug {
 sub handle_task_done {
     my ( $self, $k, $h, $task_id ) = @_;
 
-    #print ">>DEBUG>>IN DONE :: task_id [$task_id]\n";
 
     my $config_task;
   POE_ID:
     while ( my ( $task, $id ) =
-        ( each %{ $self->{'SENTINEL_DATA'}->{'poe_ids'} } ) )
+        ( each %{ $self->{'STACK'}->{'poe_ids'} } ) )
     {
         if ( $id eq $task_id ) {
             $config_task = $task;
@@ -289,13 +305,15 @@ sub handle_task_done {
     }
 
     if ($config_task) {
-        $self->{'SENTINEL_DATA'}->{'tasks'}->{$config_task}->{'running'} = 0;
-        $self->{'SENTINEL_DATA'}->{'tasks'}->{$config_task}->{'last_ran'} =
+        $self->{'STACK'}->{'tasks'}->{$config_task}->{'running'} = 0;
+        $self->{'STACK'}->{'tasks'}->{$config_task}->{'last_ran'} =
           time();
     }
-    my $dummy = Dumper( $self->{'SENTINEL_DATA'}->{'poe_ids'} );
 
-    #sleep 1;
+    # TODO : find out what is going on here for this to have to be
+    #        done - autovivication is suspected
+    my $dummy = Dumper( $self->{'STACK'}->{'poe_ids'} );
+
     delete $h->{task}->{$task_id};
     $k->yield("next_task");
 }

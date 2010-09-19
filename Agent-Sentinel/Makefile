@@ -185,9 +185,12 @@ PERL_ARCHIVE       =
 PERL_ARCHIVE_AFTER = 
 
 
-TO_INST_PM = lib/Agent/Sentinel.pm
+TO_INST_PM = lib/Agent/Sentinel.pm \
+	lib/Agent/Sentinel/Plugin/Core/SystemCommand.pm
 
-PM_TO_BLIB = lib/Agent/Sentinel.pm \
+PM_TO_BLIB = lib/Agent/Sentinel/Plugin/Core/SystemCommand.pm \
+	blib/lib/Agent/Sentinel/Plugin/Core/SystemCommand.pm \
+	lib/Agent/Sentinel.pm \
 	blib/lib/Agent/Sentinel.pm
 
 
@@ -803,6 +806,7 @@ ppd :
 
 pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	$(NOECHO) $(ABSPERLRUN) -MExtUtils::Install -e 'pm_to_blib({@ARGV}, '\''$(INST_LIB)/auto'\'', q[$(PM_FILTER)], '\''$(PERM_DIR)'\'')' -- \
+	  lib/Agent/Sentinel/Plugin/Core/SystemCommand.pm blib/lib/Agent/Sentinel/Plugin/Core/SystemCommand.pm \
 	  lib/Agent/Sentinel.pm blib/lib/Agent/Sentinel.pm 
 	$(NOECHO) $(TOUCH) pm_to_blib
 

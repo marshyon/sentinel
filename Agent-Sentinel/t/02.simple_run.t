@@ -1,5 +1,12 @@
 use strict;
 use warnings;
+use lib qw(./lib ./t/lib);
+
+
+
+use FindBin;
+
+
 use Test::More;
 use Config::Std;
 use Agent::Sentinel;
@@ -35,6 +42,8 @@ my $pidfile = $s->pid_file;
 
 # start sentinel
 #
+#my $libpath = "$FindBin::Bin/../lib:$FindBin::Bin/lib";
+
 system("perl t/simple_sentinel_run $config_file");
 
 # periodically check sentinel is still running
