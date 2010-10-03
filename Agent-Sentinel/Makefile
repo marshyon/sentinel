@@ -186,12 +186,21 @@ PERL_ARCHIVE_AFTER =
 
 
 TO_INST_PM = lib/Agent/Sentinel.pm \
-	lib/Agent/Sentinel/Plugin/Core/SystemCommand.pm
+	lib/Agent/Sentinel/Plugin/Core/SystemCommand.pm \
+	read_task_log.pl \
+	testMyApp.pl \
+	test_ipc_open3.pl
 
-PM_TO_BLIB = lib/Agent/Sentinel/Plugin/Core/SystemCommand.pm \
+PM_TO_BLIB = test_ipc_open3.pl \
+	$(INST_LIB)/Agent/test_ipc_open3.pl \
+	lib/Agent/Sentinel/Plugin/Core/SystemCommand.pm \
 	blib/lib/Agent/Sentinel/Plugin/Core/SystemCommand.pm \
 	lib/Agent/Sentinel.pm \
-	blib/lib/Agent/Sentinel.pm
+	blib/lib/Agent/Sentinel.pm \
+	read_task_log.pl \
+	$(INST_LIB)/Agent/read_task_log.pl \
+	testMyApp.pl \
+	$(INST_LIB)/Agent/testMyApp.pl
 
 
 # --- MakeMaker platform_constants section:
@@ -778,6 +787,7 @@ subdirs-test ::
 
 test_dynamic :: pure_all
 	PERL_DL_NONLAZY=1 $(FULLPERLRUN) "-MExtUtils::Command::MM" "-e" "test_harness($(TEST_VERBOSE), '$(INST_LIB)', '$(INST_ARCHLIB)')" $(TEST_FILES)
+	PERL_DL_NONLAZY=1 $(FULLPERLRUN) "-I$(INST_LIB)" "-I$(INST_ARCHLIB)" $(TEST_FILE)
 
 testdb_dynamic :: pure_all
 	PERL_DL_NONLAZY=1 $(FULLPERLRUN) $(TESTDB_SW) "-I$(INST_LIB)" "-I$(INST_ARCHLIB)" $(TEST_FILE)
@@ -806,8 +816,11 @@ ppd :
 
 pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	$(NOECHO) $(ABSPERLRUN) -MExtUtils::Install -e 'pm_to_blib({@ARGV}, '\''$(INST_LIB)/auto'\'', q[$(PM_FILTER)], '\''$(PERM_DIR)'\'')' -- \
+	  test_ipc_open3.pl $(INST_LIB)/Agent/test_ipc_open3.pl \
 	  lib/Agent/Sentinel/Plugin/Core/SystemCommand.pm blib/lib/Agent/Sentinel/Plugin/Core/SystemCommand.pm \
-	  lib/Agent/Sentinel.pm blib/lib/Agent/Sentinel.pm 
+	  lib/Agent/Sentinel.pm blib/lib/Agent/Sentinel.pm \
+	  read_task_log.pl $(INST_LIB)/Agent/read_task_log.pl \
+	  testMyApp.pl $(INST_LIB)/Agent/testMyApp.pl 
 	$(NOECHO) $(TOUCH) pm_to_blib
 
 

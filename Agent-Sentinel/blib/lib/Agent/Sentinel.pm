@@ -1,7 +1,9 @@
 package Agent::Sentinel;
 
-use Moose;    # automatically turns on strict and warnings
+use Moose;
+
 use Module::Pluggable require => 1, inner => 0;
+
 use POE qw(Wheel::Run Filter::Reference);
 use Config::Std;
 use Net::Server::Daemonize qw(daemonize);
@@ -24,6 +26,7 @@ has 'sd'          => ( is => 'rw' );
 my $MAX;
 my @tasks = qw(one two three four five six seven eight nine ten);
 my $sentinel_plugin;
+#my @sdir = ();
 
 =head1 NAME
 
@@ -69,6 +72,7 @@ sub init {
 
     # load config file and store for object access
     $self->{'cfg'} = load_config( $self->config_file() );
+    #@sdir = @{ ${ $self->cfg }{'main'}{'search_dir'} };
 
     $self->{'debug'}    = ${ $self->cfg }{'main'}{'debug'} || 0;
     $self->{'daemon'}   = ${ $self->cfg }{'main'}{'daemon'};
@@ -87,6 +91,8 @@ sub init {
     # validate each section in config starting 'task <num>' to have
     # a plugin installed of name 'type' in config
     #
+
+
     SECTION:
     foreach my $section ( keys( %{ $self->{'cfg'} } ) ) {
 
@@ -105,7 +111,7 @@ sub init {
         # skip any configured jobs that do not have a matching 
         # plugin to their type
         if ( ! $plugin_name ) {
-            warn "WARNING :: NO PLUGIN found for [$section] type = $config_plugin_name\n";
+            warn "WARNING :: NO PLUGIN found for [$section] type = $config_plugin_name\n" . Dumper($self->plugins());
             next SECTION ;
         }
 
@@ -195,6 +201,7 @@ sub start_tasks {
             my $sentinel_plugin =
               $self->{'STACK'}->{'tasks'}->{$config_task}
               ->{'task_plugin'}->new();
+
             my $sentinel_config =
               $self->{'STACK'}->{'tasks'}->{$config_task}->{'config'};
 
@@ -204,8 +211,11 @@ sub start_tasks {
 
             my $task = POE::Wheel::Run->new(
                 Program => sub {
-                    child_process ( $config_task, $sentinel_plugin,
-                        $sentinel_config );
+                    child_process ( 
+                        $config_task, 
+                        $sentinel_plugin,
+                        $sentinel_config 
+                    );
                 },
                 StdoutFilter => POE::Filter::Reference->new(),
                 StdoutEvent  => "task_result",
@@ -216,8 +226,8 @@ sub start_tasks {
             $h->{task}->{$poe_id} = $task;
             $k->sig_child( $task->PID, "sig_child" );
             $self->{'STACK'}->{'poe_ids'}->{$config_task} = $poe_id;
-            $self->{'STACK'}->{'tasks'}->{$config_task}->{'running'} =
-              1;
+            $self->{'STACK'}->{'tasks'}->{$config_task}->{'running'} = 1;
+            $self->{'STACK'}->{'tasks'}->{$config_task}->{'pid'} = $task->PID;
         }
     }
 
@@ -250,9 +260,9 @@ sub child_process {
     binmode(STDOUT);
     my $task            = shift;
     my $sentinel_plugin = shift;
-    my $hash            = shift;
+    my $config          = shift;
 
-    $sentinel_plugin->cfg($hash);
+    $sentinel_plugin->cfg($config);
     $sentinel_plugin->task($task);
 
     my $result = $sentinel_plugin->run();
@@ -283,7 +293,6 @@ sub handle_task_debug {
 sub handle_task_done {
     my ( $self, $k, $h, $task_id ) = @_;
 
-    #print ">>DEBUG>>IN DONE :: task_id [$task_id]\n";
 
     my $config_task;
   POE_ID:
