@@ -1,5 +1,7 @@
 use Test::More tests => 8;
 use Config::Std;
+use File::Copy;
+use lib qw(./lib ./t/lib);
 
 # PURPOSE OF TEST
 #
@@ -16,10 +18,11 @@ use Config::Std;
 
 # first read the test config file we 
 # will be using
+my $config_start= 't/test_config_file.cfg.start';
 my $config_file = 't/test_config_file.cfg';
+copy($config_start, $config_file);
 my $interval_default = 10;
 read_config $config_file => my %config;
-
 # next set values within the config we just
 # read - here set current user to be the one
 # to run tests
@@ -36,12 +39,13 @@ BEGIN {
     use_ok('Agent::Sentinel') || print "Bail out!  ";
 }
 
-diag("Testing Config");
+diag("Testing Config [" . $config_file . "]");
 
 # tell sentinel to start up and use the config file
 # we just modified
 my $s = Agent::Sentinel->new( config_file => $config_file );
 $s->init();
+
 
 # now read back the values sentinel thinks it has 
 # from our config file
