@@ -26,7 +26,7 @@ has 'sd'          => ( is => 'rw' );
 my $MAX;
 my @tasks = qw(one two three four five six seven eight nine ten);
 my $sentinel_plugin;
-my @sdir = ();
+#my @sdir = ();
 
 =head1 NAME
 
@@ -72,7 +72,7 @@ sub init {
 
     # load config file and store for object access
     $self->{'cfg'} = load_config( $self->config_file() );
-    @sdir = @{ ${ $self->cfg }{'main'}{'search_dir'} };
+    #@sdir = @{ ${ $self->cfg }{'main'}{'search_dir'} };
 
     $self->{'debug'}    = ${ $self->cfg }{'main'}{'debug'} || 0;
     $self->{'daemon'}   = ${ $self->cfg }{'main'}{'daemon'};
@@ -92,9 +92,6 @@ sub init {
     # a plugin installed of name 'type' in config
     #
 
-    foreach my $p ($self->plugins()) {
-        print ">>DEBUG>>$0>>FOUND PLUGIN $p\n";
-    }
 
     SECTION:
     foreach my $section ( keys( %{ $self->{'cfg'} } ) ) {
@@ -204,6 +201,7 @@ sub start_tasks {
             my $sentinel_plugin =
               $self->{'STACK'}->{'tasks'}->{$config_task}
               ->{'task_plugin'}->new();
+
             my $sentinel_config =
               $self->{'STACK'}->{'tasks'}->{$config_task}->{'config'};
 
@@ -213,8 +211,11 @@ sub start_tasks {
 
             my $task = POE::Wheel::Run->new(
                 Program => sub {
-                    child_process ( $config_task, $sentinel_plugin,
-                        $sentinel_config );
+                    child_process ( 
+                        $config_task, 
+                        $sentinel_plugin,
+                        $sentinel_config 
+                    );
                 },
                 StdoutFilter => POE::Filter::Reference->new(),
                 StdoutEvent  => "task_result",
@@ -225,8 +226,8 @@ sub start_tasks {
             $h->{task}->{$poe_id} = $task;
             $k->sig_child( $task->PID, "sig_child" );
             $self->{'STACK'}->{'poe_ids'}->{$config_task} = $poe_id;
-            $self->{'STACK'}->{'tasks'}->{$config_task}->{'running'} =
-              1;
+            $self->{'STACK'}->{'tasks'}->{$config_task}->{'running'} = 1;
+            $self->{'STACK'}->{'tasks'}->{$config_task}->{'pid'} = $task->PID;
         }
     }
 
@@ -259,9 +260,9 @@ sub child_process {
     binmode(STDOUT);
     my $task            = shift;
     my $sentinel_plugin = shift;
-    my $hash            = shift;
+    my $config          = shift;
 
-    $sentinel_plugin->cfg($hash);
+    $sentinel_plugin->cfg($config);
     $sentinel_plugin->task($task);
 
     my $result = $sentinel_plugin->run();
