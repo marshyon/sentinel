@@ -1,0 +1,45 @@
+[main]
+
+# debug is off
+debug = 0
+
+# daemon mode is off by default at start of tests
+daemon = 1
+
+# default global interval of time to elapse between tasks
+interval = 10
+
+pid_file_dir = t/run/
+
+pid_file = senintel.pid
+
+user = jon
+
+group = jon
+
+# has to be absolute, not relative path for daemon mode to work
+status_dir = t/status
+
+[task 1]
+
+interval = 2
+
+type = TestCommand
+
+command = /usr/local/bin/my_task1_logtest.pl
+
+parameters = -D -f /usr/local/etc/my_task1_logtest.cfg
+
+logfile = /home/jon/dev/poe/cpan/Agent-Sentinel/t/task2.log
+[task 2]
+
+interval = 8
+
+type = SystemCommand
+
+command = /usr/local/bin/my_task2_filetest.pl
+
+parameters = -D -f /usr/local/etc/my_task2_filetest.cfg
+
+logfile = ./t/task2.log
+
