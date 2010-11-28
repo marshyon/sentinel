@@ -11,6 +11,11 @@ use YAML;
 use Data::Dumper;
 use List::Util qw(first);
 use Cwd;
+use Log::Log4perl qw(:easy);
+
+Log::Log4perl->easy_init( { level   => $WARN,
+                            file    => ">>sentinel_debug.log" } );
+
 
 has 'config_file' => ( is => 'rw' );
 has 'debug'       => ( is => 'ro' );
@@ -72,7 +77,6 @@ sub init {
 
     # load config file and store for object access
     $self->{'cfg'} = load_config( $self->config_file() );
-    #@sdir = @{ ${ $self->cfg }{'main'}{'search_dir'} };
 
     $self->{'debug'}    = ${ $self->cfg }{'main'}{'debug'} || 0;
     $self->{'daemon'}   = ${ $self->cfg }{'main'}{'daemon'};

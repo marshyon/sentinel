@@ -3,11 +3,6 @@ use warnings;
 use FindBin qw($Bin);
 use lib qw(./lib ./t/lib $Bin/../lib);
 
-
-
-use FindBin;
-
-
 use Test::More;
 use Config::Std;
 use Agent::Sentinel;
@@ -22,8 +17,9 @@ use Unix::PID;
 # after a short time, kill sentinel process
 # check it's gone
 
-# create directory for test runs if not there already
+# create directorys for test runs if not there already
 mkdir ("t/run") unless ( -d "t/run");
+mkdir ("t/status") unless ( -d "t/status");
 
 # read config file and set daemon mode
 #
