@@ -7,9 +7,7 @@ based on Perl POE
 uses Poe's Wheel architecture to run separate forked tasks, serialising 
 child process status information back to parent process
 
-Alpha release
-
-Barely working or usefull, a starting point only
+Beta release
 
 see bin/sentinel for a typical executable used to invoke sentinel
 
