@@ -1,6 +1,8 @@
 use strict;
 use warnings;
 use ExtUtils::MakeMaker;
+use FindBin qw($Bin);
+use lib "$Bin/lib";
 
 WriteMakefile(
     NAME                => 'Agent::Sentinel',

@@ -1,6 +1,7 @@
 use strict;
 use warnings;
-use lib qw(./lib ./t/lib);
+use FindBin qw($Bin);
+use lib qw(./lib ./t/lib $Bin/../lib);
 
 
 
@@ -20,6 +21,9 @@ use Unix::PID;
 # to check for it's process id
 # after a short time, kill sentinel process
 # check it's gone
+
+# create directory for test runs if not there already
+mkdir ("t/run") unless ( -d "t/run");
 
 # read config file and set daemon mode
 #

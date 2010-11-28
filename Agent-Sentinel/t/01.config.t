@@ -1,7 +1,8 @@
 use Test::More tests => 8;
 use Config::Std;
 use File::Copy;
-use lib qw(./lib ./t/lib);
+use FindBin qw($Bin);
+use lib qw(./lib ./t/lib $Bin/../lib);
 
 # PURPOSE OF TEST
 #

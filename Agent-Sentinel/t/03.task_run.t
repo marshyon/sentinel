@@ -1,6 +1,5 @@
 use strict;
 use warnings;
-#use lib qw(/home/jon/dev/poe/cpan/Agent-Sentinel/lib /home/jon/dev/poe/cpan/Agent-Sentinel/t/lib);
 use lib qw(./lib ./t/lib);
 use Test::More;
 use Config::Std;
@@ -63,14 +62,10 @@ my $pidfile = $s->pid_file;
 
 # start sentinel
 #
-diag("staring sentinel");
+diag("starting sentinel");
 system("perl t/sentinel_run $config_file");
 
-
-
-#print Dump(\%status);
 my $running = 0;
-#sleep 1;
 diag("waiting for sentinel test plugin to report started");
 WAIT:
 foreach ( 1 .. 250 ) {
@@ -107,4 +102,6 @@ $pid->kill_pid_file($pidfile);
 ok( !$pid->is_pidfile_running($pidfile), 'stopped running' );
 
 done_testing;
+
+
 
