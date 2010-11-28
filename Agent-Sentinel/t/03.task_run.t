@@ -70,7 +70,7 @@ my $running = 0;
 diag("waiting for sentinel test plugin to report started");
 WAIT:
 foreach ( 1 .. 250 ) {
-    my %status = YAML::LoadFile($logpath);
+    my %status = YAML::LoadFile($logpath) if ( -e $logpath );
     $running = $status{'running'};
     last WAIT if ($running);
 }
@@ -84,7 +84,7 @@ my %status;
 RUNNING:
 foreach ( 1 .. 1000 ) {
     %status = ();
-    %status = YAML::LoadFile($logpath);
+    %status = YAML::LoadFile($logpath) if ( -e $logpath );
     $running = $status{'running'};
     last RUNNING if ( ! $running );
     ok( $running, "test plugin reports still to be running");
