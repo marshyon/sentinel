@@ -1,6 +1,7 @@
 use strict;
 use warnings;
-use lib qw(./lib ./t/lib);
+use FindBin qw($Bin);
+use lib qw(./lib ./t/lib $Bin/../lib);
 use Test::More;
 use Config::Std;
 use Agent::Sentinel;

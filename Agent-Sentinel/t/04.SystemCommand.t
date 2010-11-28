@@ -1,8 +1,8 @@
-#!perl 
-
 use Test::More;
 use FindBin;
 use YAML;
+use FindBin qw($Bin);
+use lib qw(./lib ./t/lib $Bin/../lib);
 
 BEGIN {
     use_ok('Agent::Sentinel::Plugin::Core::SystemCommand') || print "Bail out!
