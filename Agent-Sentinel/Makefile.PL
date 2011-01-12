@@ -14,6 +14,7 @@ WriteMakefile(
         : () ),
     PL_FILES  => {},
     PREREQ_PM => {
+        'Unix::PID'                                          => 0,
         'Test::More'                                         => 0,
         'Config::Std'                                        => '0.007',
         'Net::Server::Daemonize'                             => '0.05',
