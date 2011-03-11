@@ -44,23 +44,21 @@ my $pidfile = $s->pid_file;
 #
 #my $libpath = "$FindBin::Bin/../lib:$FindBin::Bin/lib";
 
-my $cmd = "perl t/simple_sentinel_run $config_file";
-diag("running : [$cmd]");
-system($cmd);
+system("perl t/simple_sentinel_run $config_file");
 
 # periodically check sentinel is still running
 my $c = 1;
-foreach ( 1 .. 3 ) {
+foreach ( 1 .. 5 ) {
     $c++;
-    sleep 1;
     ok( $pid->is_pidfile_running($pidfile), 'still running' );
+    sleep 1;
 }
 
 # stop sentinel
 #
 $pid->kill_pid_file($pidfile);
 
-sleep 2;
+sleep 1;
 
 ok( !$pid->is_pidfile_running($pidfile), 'stopped running' );
 
