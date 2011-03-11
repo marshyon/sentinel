@@ -71,12 +71,17 @@ sub load_config {
 sub init {
     my $self = shift;
 
-    # store current working directory in 'STACK' for later use
-    my $working_dir = getcwd;
-    $self->{'STACK'}->{'working_dir'} = "$working_dir/t/status/status.yaml";
-
     # load config file and store for object access
     $self->{'cfg'} = load_config( $self->config_file() );
+
+    # store current working directory in 'STACK' for later use
+    my $working_dir;
+    if ( ${ $self->cfg }{'main'}{'working_directory'} ) {
+        $working_dir = ${ $self->cfg }{'main'}{'working_directory'} ;
+    }
+    $working_dir = getcwd unless $working_dir;
+    $self->{'STACK'}->{'working_dir'} = "$working_dir/status.yaml";
+
 
     $self->{'debug'}    = ${ $self->cfg }{'main'}{'debug'} || 0;
     $self->{'daemon'}   = ${ $self->cfg }{'main'}{'daemon'};
@@ -275,7 +280,7 @@ sub child_process {
 
     my %result = (
         task   => $task,
-        status => $result . "[$task] .... seems ok to me",
+        status => $result,
     );
     my $output = $filter->put( [ \%result ] );
     print @$output;
@@ -284,7 +289,8 @@ sub child_process {
 sub handle_task_result {
     my ( $self, $a ) = @_;
     my $result = $a;
-    print "\n\nResult for $result->{task}: [" . $result->{status} . "]\n";
+    # OUTPUT RESULTS
+    print "\n$result->{task} :: " . $result->{status} ;
     $self->{'STACK'}->{'tasks'}->{ $result->{task} }->{'result'} =
       $result->{status};
 }
