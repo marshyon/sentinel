@@ -19,14 +19,19 @@ sub run {
     my $self = shift;
     my ( $wtr, $rdr, $err );
     my %dump = ();
+
+
+
    
     # construct command line argument from config
     my $args = '';
+    if( $self->cfg->{'args'} ) {
     if( $self->cfg->{'args'} =~ m{ARRAY} ) {
         $args = join(" ", @{ $self->cfg->{'args'} } );
     }
     else {
         $args = $self->cfg->{'args'};
+    }
     }
     my $command .= $self->cfg->{'command'} . ' ' . $args;
 
@@ -61,10 +66,10 @@ sub run {
       . $command . "]" . $dump{'err'};
     }
     else {
-        return
-            "SystemCommand task["
-          . $self->task . "] log [". $yaml_status_file ."] ["
-          . $command . "]";
+        return $dump{'rdr'};
+            #"SystemCommand !!!!!!!  task[" 
+          #. $self->task . "] log [". $yaml_status_file ."] ["
+          #. $command . "]";
     }
 
 }
