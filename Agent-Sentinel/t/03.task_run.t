@@ -69,10 +69,11 @@ system("perl t/sentinel_run $config_file");
 my $running = 0;
 diag("waiting for sentinel test plugin to report started");
 WAIT:
-foreach ( 1 .. 250 ) {
+foreach ( 1 .. 5 ) {
     my %status = YAML::LoadFile($logpath) if ( -e $logpath );
     $running = $status{'running'};
     last WAIT if ($running);
+    sleep 1;
 }
 
 ok( $running, "test plugin reports to be running");
@@ -82,12 +83,13 @@ ok( $running, "test plugin reports to be running");
 diag("watching for sentinel test plugin to still be running");
 my %status;
 RUNNING:
-foreach ( 1 .. 1000 ) {
+foreach ( 1 .. 5 ) {
     %status = ();
     %status = YAML::LoadFile($logpath) if ( -e $logpath );
     $running = $status{'running'};
     last RUNNING if ( ! $running );
     ok( $running, "test plugin reports still to be running");
+    sleep 1;
 }
 
 sleep 1;
@@ -99,6 +101,8 @@ ok( ! $running, "test plugin reports stopped");
 # stop sentinel
 #
 $pid->kill_pid_file($pidfile);
+
+sleep 2;
 
 ok( !$pid->is_pidfile_running($pidfile), 'stopped running' );
 
