@@ -199,20 +199,22 @@ sub start_tasks {
 		my $last_started_at =
 		  $self->{'STACK'}->{'tasks'}->{$config_task}->{'started_at'} || 0;
 		my $run_immediate =
-		  $self->{'STACK'}->{'tasks'}->{$config_task}->{'config'}->{'run_immediate'};
+		  $self->{'STACK'}->{'tasks'}->{$config_task}->{'config'}
+		  ->{'run_immediate'};
 
 		# skip runnig tasks
 		next CONFIG
 		  if ( $self->{'STACK'}->{'tasks'}->{$config_task}->{'running'} );
 
 		# now run only jobs that are scheduled to run
-		my $now     = time();
-		my $elapsed = $now - $last_ran;
-
+		my $now                     = time();
+		my $elapsed_since_end_run   = $now - $last_ran;
+		my $elapsed_since_start_run = $now - $last_started_at;
 		if (
 			$self->time_to_run(
 				{
-					e => $elapsed,
+					e => $elapsed_since_end_run,
+					s => $elapsed_since_start_run,
 					i => $interval,
 					n => $now,
 					t => $config_task,
@@ -273,26 +275,29 @@ sub start_tasks {
 sub time_to_run {
 
 	my ( $self, $param ) = @_;
-	my $elapsed       = $param->{'e'};
-	my $interval      = $param->{'i'};
-	my $now           = $param->{'n'};
-	my $task          = $param->{'t'};
-	my $run_immediate = $param->{'r'};
+	my $elapsed_since_end_run   = $param->{'e'};
+	my $interval                = $param->{'i'};
+	my $now                     = $param->{'n'};
+	my $task                    = $param->{'t'};
+	my $run_immediate           = $param->{'r'};
+	my $elapsed_since_start_run = $param->{'s'};
 
 	given ($interval) {
 		when ( ( ( ( 60 % $interval ) == 0 ) || ( ( 3600 % $interval ) == 0 ) )
 			  && !$run_immediate )
 		{
-			if ( ( ( $now % $interval ) == 0 ) && ( $elapsed >= $interval ) ) {
+			if (   ( ( $now % $interval ) == 0 )
+				&& ( $elapsed_since_start_run >= $interval ) )
+			{
 				DEBUG "DEBUG :: INTERVAL MIN/HOUR running [" . $task
-				  . "] elapsed[$elapsed] interval[$interval]";
+				  . "] elapsed since start [$elapsed_since_start_run] interval[$interval]";
 				return 1;
 			}
 		}
 		default {
-			if ( $elapsed >= $interval ) {
+			if ( $elapsed_since_end_run >= $interval ) {
 				DEBUG "DEBUG :: running [" . $task
-				  . "] elapsed[$elapsed] interval[$interval]";
+				  . "] elapsed since end [$elapsed_since_end_run] interval[$interval]";
 				return 1;
 			}
 		}
