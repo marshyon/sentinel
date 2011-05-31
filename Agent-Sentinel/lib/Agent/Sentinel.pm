@@ -84,6 +84,8 @@ sub init {
 		$working_dir = ${ $self->cfg }{'main'}{'working_directory'};
 	}
 	$working_dir = getcwd unless $working_dir;
+	chdir($working_dir);
+
 	$self->{'STACK'}->{'working_dir'} = "$working_dir/status.yaml";
 
 	$self->{'debug'}    = ${ $self->cfg }{'main'}{'debug'} || 0;
@@ -234,6 +236,8 @@ sub start_tasks {
 			my $sentinel_config =
 			  $self->{'STACK'}->{'tasks'}->{$config_task}->{'config'};
 
+
+
 			# POE's Wheel::Run takes a reference to a subroutine which will
 			# itself be spawned as a child process - we call this sub here
 			# 'child_process'
@@ -348,8 +352,49 @@ sub handle_task_result {
 	my ( $self, $a ) = @_;
 	my $result = $a;
 
-	# OUTPUT RESULTS
-	print "\n$result->{task} :: " . $result->{status};
+
+	# CHECK OUTPUT RESULTS
+	
+	# if there is 'tagged' yaml output from plugin ...
+	if($result->{status} =~ m{<yaml>(.+?)</yaml>}msxi) {
+
+	    my %yaml = ();
+	    eval{
+	    	# try to get a hash of loaded yaml
+	    	%yaml = %{ YAML::Load($1) };
+	    };
+
+	    my %args = ();
+	    my @args_list = ();
+	    
+	    # if yaml loaded successefully ....
+	    if(!$@){
+	        while(my($key, $val) = each(%yaml)) {
+	        	# save arguments into a temporary hash
+	        	$args{$key} = $val;
+	        }
+	    }
+	    
+	    # if we saved arguments ...
+	    if(%args) {
+
+            # save each hash element to a list 
+	        while( my($key, $val) = each( %{ $args{'args'} } ) )    {
+	            push @args_list, $key . ' ' . $val;
+	        }
+
+            # save the list to our 'STACK', config, args for current task
+	        $self->{'STACK'}->{'tasks'}->{ $result->{task} }->{'config'}->{'args'} = \@args_list;
+	        print "ran task[".$result->{'task'}."] and found [".@args_list."] args in YAML output\n";
+	    }
+	    else {
+	    	print "no args found in YAML\n"
+	    }
+	}
+	else {
+		# just print resultant output, as there was no 'YAML' embedded
+	    print "\n$result->{task} status ::\n" . $result->{status}."\n-----\n";
+	}
 	$self->{'STACK'}->{'tasks'}->{ $result->{task} }->{'result'} =
 	  $result->{status};
 }
