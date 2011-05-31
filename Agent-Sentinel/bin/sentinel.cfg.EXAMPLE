@@ -105,7 +105,7 @@ search = YourOwnPlugins
 # minimal task configuration ....
 #
 
-action = /usr/bin/some_other_command_or_script
+command = /usr/bin/some_other_command_or_script
 plugin = SystemCommand
 interval = 3
 description = this is the result of a sentinel run command [/usr/bin/some....]
@@ -122,7 +122,9 @@ description = this is the result of a sentinel run command [/usr/bin/some....]
 # an action is typically a system command but may be
 # an instruction passed to a perl plugin
 #
-action = /usr/bin/some_command_or_script
+command = /home/jon/dev/sentinel/Agent-Sentinel/bin/test_command.pl
+args = -lirt
+args = /
 
 # each task *must* have a plugin allocated 
 # see docs of this module for a full list of supported
@@ -152,11 +154,11 @@ description = description of task 1
 # SystemCommand uses the following extra parameter 
 # definitions:
 #
-paramater = -D -s --other-parameter
+# args = -D -s --other-parameter
 #
 # ... where command line parameters are set
 #
-working directory = /some/directory/to cd to
+# working directory = /some/directory/to cd to
 #
 # ... where the directory into which the process
 #     is to start from
