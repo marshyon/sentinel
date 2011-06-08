@@ -77,7 +77,13 @@ Log::Log4perl->easy_init(
 );
 
 if ( -e $status_file ) {
-    $status_ref = YAML::LoadFile($status_file);
+    eval {
+        $status_ref = YAML::LoadFile($status_file);
+    }
+    if($@) {
+               unlink($status_file);
+               LOGDIE "LoadFile failed :: $@ :: removed [$status_file]";
+    }
 }
 
 LOGDIE "directory $dir does not exist\n" unless ( -d $dir );
