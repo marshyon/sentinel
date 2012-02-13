@@ -12,39 +12,39 @@
 #       Jon Brookes "<jon.brookes@ajbcontracts.co.uk>"
 #
 # LICENCE AND COPYRIGHT
-#       Copyright (c) 2011, Jon Brookes "<jon.brookes@ajbcontracts.co.uk>". All 
+#       Copyright (c) 2011, Jon Brookes "<jon.brookes@ajbcontracts.co.uk>". All
 #       rights reserved.
 #
-#       This module is free software; you can redistribute it and/or modify it 
+#       This module is free software; you can redistribute it and/or modify it
 #       under the same terms as Perl itself.
 #
 # DISCLAIMER OF WARRANTY
-#       BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY 
-#       FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN 
-#       OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES 
-#       PROVIDE THE SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER 
-#       EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-#       WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. 
-#       THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS 
-#       WITH YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE 
+#       BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
+#       FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN
+#       OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES
+#       PROVIDE THE SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
+#       EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+#       WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+#       THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS
+#       WITH YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE
 #       COST OF ALL NECESSARY SERVICING, REPAIR, OR CORRECTION.
 #
-#       IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING 
-#       WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR 
-#       REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE LIABLE 
-#       TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL, OR 
-#       CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE THE 
-#       SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING 
-#       RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A 
-#       FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF 
-#       SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF 
+#       IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
+#       WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR
+#       REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE LIABLE
+#       TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL, OR
+#       CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE THE
+#       SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING
+#       RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
+#       FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
+#       SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
 #       SUCH DAMAGES.
 #
 #===============================================================================
 
 package Agent::Sentinel::Util::FileCopyTail;
 
-use feature ':5.10.0'; 
+use feature ':5.10.0';
 use Moose;
 use Storable qw(store retrieve freeze thaw dclone);
 use IO::File;
@@ -56,7 +56,7 @@ use UUID::Tiny;
 use Log::Log4perl qw(:easy);
 use Data::Dumper;
 use IPC::Open3;
-use Symbol 'gensym'; 
+use Symbol 'gensym';
 
 has 'status_file_path'         => ( is => 'rw' );
 has 'stop_copy_after_maxlines' => ( is => 'rw' );
@@ -64,6 +64,19 @@ has 'log_to'                   => ( is => 'rw' );
 has 'buffer'                   => ( is => 'rw' );
 has 'multi'                    => ( is => 'rw' );
 has 'output_cmd'               => ( is => 'rw' );
+
+=over
+
+=item load_status
+
+=back
+
+load_status loads status file from previous run
+
+it destroys and recreates same file if errors are 
+encountered on load
+
+=cut
 
 sub load_status {
 
@@ -104,14 +117,34 @@ sub load_status {
     $self->{'sref'} = $ref;
 }
 
+=over
+
+=item save_status
+
+=back
+ 
+save status accepts no parameter and saves status using 'store'
+of storable fame, using internal variable set by accessors
+ 
+=cut
+
 sub save_status {
 
     my ( $self, $params ) = @_;
 
-    #my $ref = $params->{'ref'};
     store( $self->{'sref'}, $self->{'status_file_path'} );
 
 }
+
+=over
+
+=item tie_directory
+
+=back
+
+accepts no parameters and opens directory using IO::Dir to do so
+
+=cut
 
 sub tie_directory {
     my ( $self, $param ) = @_;
@@ -119,6 +152,23 @@ sub tie_directory {
     tie %{ $self->{'dir'} }, 'IO::Dir', $d;
     return $self->{'dir'};
 }
+
+=over
+
+=item examine_file
+
+=back
+
+examine file accepts 'file', 'dir', 'md5'
+it uses md5 to check if this file has been
+seen before
+
+import_data_from is called if it has new
+data
+
+=cut
+
+
 
 sub examine_file {
 
@@ -183,6 +233,22 @@ sub examine_file {
     }
 }
 
+=over
+
+=item import_data_from
+
+=back
+
+import_data_from accepts 'file', 'dir', 'from_line', 'to_line
+
+opens and reads in file to be imported
+
+if lines are greater than 'stop_copy_after_maxlines', it drops out
+
+it currently does the job of buffering multi-lines 
+
+=cut
+
 sub import_data_from {
 
     my ( $self, $param ) = @_;
@@ -203,8 +269,8 @@ sub import_data_from {
           unless ( defined( $self->{'lines_copied'} ) );
         if ( $self->{'stop_copy_after_maxlines'} ) {
             next LINE
-              if (
-                $self->{'lines_copied'} >= $self->{'stop_copy_after_maxlines'} );
+              if ( $self->{'lines_copied'} >=
+                $self->{'stop_copy_after_maxlines'} );
         }
 
         next LINE
@@ -219,29 +285,26 @@ sub import_data_from {
         # first run, so we dont want to output anything untill
         # we have 'seen' this file or files matched before
 
-        if( $self->{'seen'} ) {
+        if ( $self->{'seen'} ) {
 
-            if( $self->{'buffer'} ) {
-
+            if ( $self->{'buffer'} ) {
 
                 my $current_line = "$_";
 
-                given ( $current_line ) {
+                given ($current_line) {
 
-                    when ( $current_line =~ m{ $self->{'multi'} }msx  )
-                    { 
+                    when ( $current_line =~ m{ $self->{'multi'} }msx ) {
                         $self->{'buffered_lines'} .= $current_line . "\n";
                     }
-                    when ( $current_line !~ m{ $self->{'multi'} }msx ) 
-                    {
-                        if($self->{'buffered_lines'}) {
+                    when ( $current_line !~ m{ $self->{'multi'} }msx ) {
+                        if ( $self->{'buffered_lines'} ) {
                             $self->run_commands();
                             $self->{'buffered_lines'} = '';
                         }
                         $self->{'buffered_lines'} = $current_line . "\n";
                     }
                 }
-            } 
+            }
             else {
                 print "$_\n";
             }
@@ -252,39 +315,54 @@ sub import_data_from {
     close $fh;
 
     # if buffering, output last line(s) here
-    if( $self->{'buffer'} ) {
+    if ( $self->{'buffer'} ) {
         $self->run_commands();
         $self->{'buffered_lines'} = '';
-       #print ">>DEBUG>> buffer :: " . Dumper($self->{'buffer'});
-       #print ">>DEBUG>> multi :: " . Dumper($self->{'multi'});
-       #print ">>DEBUG>> output_cmd ::> " . Dumper($self->{'output_cmd'});
-
     }
 }
 
+=over
+
+=item run_commands
+
+=back
+
+run_commands accepts no parameters and uses an internally stored
+list of commands to open pipes to each using IPC::Open3
+
+=cut
+
 sub run_commands {
-    my ( $self ) = @_;
-        my $err = gensym;
+    my ($self) = @_;
+    my $err = gensym;
 
-        foreach my $cmd ( @{ $self->{'output_cmd'} } ) {
+    foreach my $cmd ( @{ $self->{'output_cmd'} } ) {
 
-           #say "running [$cmd]";
-           #say "on[\n" . $self->{'buffered_lines'} . "]\n";
-            my($wtr, $rdr, $err, $pid);
-            eval { $pid = open3($wtr, $rdr, $err, $cmd) };
-            warn "$cmd could not be run at all : $@\n" if $@;
-            if( ! $@ ) {
-                print $wtr $self->{'buffered_lines'};
-                close $wtr;
-                while(<$rdr>) {
-                    print;
-                }
-                close $rdr;
+        my ( $wtr, $rdr, $err, $pid );
+        eval { $pid = open3( $wtr, $rdr, $err, $cmd ) };
+        warn "$cmd could not be run at all : $@\n" if $@;
+        if ( !$@ ) {
+            print $wtr $self->{'buffered_lines'};
+            close $wtr;
+            while (<$rdr>) {
+                print;
             }
+            close $rdr;
         }
+    }
 }
 
+=over
 
+=item file_hash_id
+
+=back
+
+file_hash_id takes file name as parameter
+
+it returns a digest using md5_hex
+
+=cut
 
 sub file_hash_id {
 
@@ -303,6 +381,26 @@ sub file_hash_id {
     return $digest;
 
 }
+
+=over
+
+=item run
+
+=back
+
+the run sub is used to run the application
+
+it accepts 'd' ( dir ), 'pattern_match' and 'oldest'
+
+the directory is iterated, using a pattern match to locate
+files of interest and ignorning anything older than oldest
+
+each file is 'examined' and subsequently tested for 'import'
+
+finally, old status information is cleared down in the state
+persistent filestore
+
+=cut
 
 sub run {
 
@@ -324,6 +422,7 @@ sub run {
 
     foreach my $file (
         sort {
+
             # numeric sort of keys in hash by value
             $self->{'dir'}->{$a}->mtime() <=> $self->{'dir'}->{$b}->mtime();
         }
