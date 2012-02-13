@@ -14,6 +14,16 @@ has 'stdout'        => ( is => 'ro' );
 has 'stderr'        => ( is => 'ro' );
 has 'pid'           => ( is => 'ro' );
 
+=over
+
+=item run
+
+=back
+
+TODO : add documentation
+
+=cut
+
 sub run {
 
     my $self = shift;
