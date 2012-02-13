@@ -44,6 +44,7 @@
 
 package Agent::Sentinel::Util::FileCopyTail;
 
+use feature ':5.10.0'; 
 use Moose;
 use Storable qw(store retrieve freeze thaw dclone);
 use IO::File;
@@ -53,10 +54,16 @@ use Date::Parse;
 use Date::Format;
 use UUID::Tiny;
 use Log::Log4perl qw(:easy);
+use Data::Dumper;
+use IPC::Open3;
+use Symbol 'gensym'; $err = gensym;
 
 has 'status_file_path'         => ( is => 'rw' );
 has 'stop_copy_after_maxlines' => ( is => 'rw' );
 has 'log_to'                   => ( is => 'rw' );
+has 'buffer'                   => ( is => 'rw' );
+has 'multi'                    => ( is => 'rw' );
+has 'output_cmd'               => ( is => 'rw' );
 
 sub load_status {
 
@@ -204,12 +211,67 @@ sub import_data_from {
           unless ( ( $count > $from_line ) and ( $count <= $to_line ) );
 
         chomp();
-        print "$_\n" if ( $self->{'seen'} );
-        $self->{'lines_copied'}++;
 
+        ## TODO : re-factor following into another sub
+
+        # this test is to see if we have 'seen' a status file
+        # basically, if there isnt a status file, this is a
+        # first run, so we dont want to output anything untill
+        # we have 'seen' this file or files matched before
+
+        if( $self->{'seen'} ) {
+
+            if( $self->{'buffer'} ) {
+
+
+                my $current_line = "$_";
+
+                given ( $current_line ) {
+
+                    when ( $current_line =~ m{ $self->{'multi'} }msx  )
+                    { 
+                        $self->{'buffered_lines'} .= $current_line . "\n";
+                    }
+                    when ( $current_line !~ m{ $self->{'multi'} }msx ) 
+                    {
+                        if($self->{'buffered_lines'}) {
+                            say "[\n".$self->{'buffered_lines'}."]";
+                            $self->{'buffered_lines'} = '';
+                        }
+                        $self->{'buffered_lines'} = $current_line . "\n";
+                    }
+                }
+            } 
+            else {
+                print "$_\n";
+            }
+            $self->{'lines_copied'}++;
+        }
     }
 
     close $fh;
+
+    # if buffering, output last line(s) here
+    if( $self->{'buffer'} ) {
+        say "end of output[\n" . $self->{'buffered_lines'} . "]\n";
+        $self->{'buffered_lines'} = '';
+        print ">>DEBUG>> buffer :: " . Dumper($self->{'buffer'});
+        print ">>DEBUG>> multi :: " . Dumper($self->{'multi'});
+        print ">>DEBUG>> output_cmd ::> " . Dumper($self->{'output_cmd'});
+
+        foreach my $cmd ( @$self->{'output_cmd'} ) {
+
+            say "running [$cmd]\n";
+            my($wtr, $rdr, $err);
+            #my $pid = open3($wtr, $rdr, $err, 'some cmd and args', 'optarg', ...);
+
+
+
+
+        }
+
+
+    }
 }
 
 sub file_hash_id {
@@ -233,9 +295,14 @@ sub file_hash_id {
 sub run {
 
     my ( $self, $param ) = @_;
+
     my $dir           = $param->{'d'};
     my $pattern_match = $param->{'pattern_match'};
     my $oldest        = $param->{'oldest'};
+
+    $self->{'multi'} = '^\s+' unless $self->{'multi'};
+
+    # TODO : if multi line specified, but no commmands error and die
 
     $self->load_status();
     $self->tie_directory( { dir => $dir } );
