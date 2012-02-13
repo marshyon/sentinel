@@ -56,7 +56,7 @@ use UUID::Tiny;
 use Log::Log4perl qw(:easy);
 use Data::Dumper;
 use IPC::Open3;
-use Symbol 'gensym'; $err = gensym;
+use Symbol 'gensym'; 
 
 has 'status_file_path'         => ( is => 'rw' );
 has 'stop_copy_after_maxlines' => ( is => 'rw' );
@@ -235,7 +235,7 @@ sub import_data_from {
                     when ( $current_line !~ m{ $self->{'multi'} }msx ) 
                     {
                         if($self->{'buffered_lines'}) {
-                            say "[\n".$self->{'buffered_lines'}."]";
+                            $self->run_commands();
                             $self->{'buffered_lines'} = '';
                         }
                         $self->{'buffered_lines'} = $current_line . "\n";
@@ -253,26 +253,38 @@ sub import_data_from {
 
     # if buffering, output last line(s) here
     if( $self->{'buffer'} ) {
-        say "end of output[\n" . $self->{'buffered_lines'} . "]\n";
+        $self->run_commands();
         $self->{'buffered_lines'} = '';
-        print ">>DEBUG>> buffer :: " . Dumper($self->{'buffer'});
-        print ">>DEBUG>> multi :: " . Dumper($self->{'multi'});
-        print ">>DEBUG>> output_cmd ::> " . Dumper($self->{'output_cmd'});
-
-        foreach my $cmd ( @$self->{'output_cmd'} ) {
-
-            say "running [$cmd]\n";
-            my($wtr, $rdr, $err);
-            #my $pid = open3($wtr, $rdr, $err, 'some cmd and args', 'optarg', ...);
-
-
-
-
-        }
-
+       #print ">>DEBUG>> buffer :: " . Dumper($self->{'buffer'});
+       #print ">>DEBUG>> multi :: " . Dumper($self->{'multi'});
+       #print ">>DEBUG>> output_cmd ::> " . Dumper($self->{'output_cmd'});
 
     }
 }
+
+sub run_commands {
+    my ( $self ) = @_;
+        my $err = gensym;
+
+        foreach my $cmd ( @{ $self->{'output_cmd'} } ) {
+
+           #say "running [$cmd]";
+           #say "on[\n" . $self->{'buffered_lines'} . "]\n";
+            my($wtr, $rdr, $err, $pid);
+            eval { $pid = open3($wtr, $rdr, $err, $cmd) };
+            warn "$cmd could not be run at all : $@\n" if $@;
+            if( ! $@ ) {
+                print $wtr $self->{'buffered_lines'};
+                close $wtr;
+                while(<$rdr>) {
+                    print;
+                }
+                close $rdr;
+            }
+        }
+}
+
+
 
 sub file_hash_id {
 
