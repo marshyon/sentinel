@@ -129,7 +129,7 @@ $fct->run(
 
 sub usage_die {
 
-    my $message_of_death = shift || '';
+    my $message_of_death = shift ;
 
     print <<EOF;
 
@@ -199,7 +199,7 @@ spaces with log lines that precede them
 pipe switches are commands that may be openened using a 'pipe', each multiple / single
 log line being sent to each process
 
---multimatch can be used to specify a regex that will over-ride the default of '^\s+'
+--multimatch can be used to specify a regex that will over-ride the default of '^\\s+'
 
 parameters may be shortened if they do not lose their individual identity, for example:
 

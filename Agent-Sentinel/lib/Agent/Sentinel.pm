@@ -55,7 +55,9 @@ Perhaps a little code snippet.
 
 =head1 SUBROUTINES/METHODS
 
-=head2 function1
+=head2 load_config
+
+TODO - add docs 
 
 =cut
 
@@ -64,6 +66,16 @@ sub load_config {
 	read_config $file => my %cfg;
 	return \%cfg;
 }
+
+=over
+
+=item init
+
+=back
+
+TODO - add docs 
+
+=cut
 
 sub init {
 	my $self = shift;
@@ -152,8 +164,17 @@ sub init {
 	}
 }
 
-# starts the POE Session - this is like 'main' where the whole of POE
-# is controlled by each 'inline_state(s)' there after
+=over
+
+=item run
+
+=back
+
+starts the POE Session - this is like 'main' where the whole of POE
+is controlled by each 'inline_state(s)' there after
+
+=cut
+
 sub run {
 
 	my $self = shift;
@@ -179,11 +200,20 @@ sub run {
 	$poe_kernel->run();
 }
 
-# just starts tasks, nothing else
-# a task may be started if it is time to do so
-# time to run is decided upon by configured 'interval' time
-# in the config file section of 'task <num>' section
-# a task may not be run untill this time interval has elapsed
+=over
+
+=item start_tasks
+
+=back
+
+just starts tasks, nothing else
+a task may be started if it is time to do so
+time to run is decided upon by configured 'interval' time
+in the config file section of 'task <num>' section
+a task may not be run untill this time interval has elapsed
+
+=cut
+
 sub start_tasks {
 
 	my ( $self, $k, $h ) = @_;
@@ -267,14 +297,22 @@ sub start_tasks {
 
 }
 
-# returns true if it is 'time to run'
-#
-# if our 'interval' is a figure divisible into a minute or hour period,
-# only run when it is on the second of the division, for example 300 seconds
-# being 5 minutes will run on each 5th minute of the hour
-# this can be disabled in config for this task if run_immediate is set
-# failing the above, simply run if the interval of time since last run has
-# passed
+=over
+
+=item time_to_run
+
+=back
+
+returns true if it is 'time to run'
+
+if our 'interval' is a figure divisible into a minute or hour period,
+only run when it is on the second of the division, for example 300 seconds
+being 5 minutes will run on each 5th minute of the hour
+this can be disabled in config for this task if run_immediate is set
+failing the above, simply run if the interval of time since last run has
+passed
+
+=cut
 
 sub time_to_run {
 
@@ -309,10 +347,19 @@ sub time_to_run {
 	return 0;
 }
 
-# checks for running tasks and starts new ones if old one has
-# finished - will continually call new task untill it is running
-# it leaves the job of finding out if the job is ready to be run
-# to start tasks
+=over
+
+=item time_tick
+
+=back
+
+checks for running tasks and starts new ones if old one has
+finished - will continually call new task untill it is running
+it leaves the job of finding out if the job is ready to be run
+to start tasks
+
+=cut
+
 sub time_tick {
 
 	my ( $self, $k, $h, $a ) = @_;
@@ -325,6 +372,16 @@ sub time_tick {
 	$self->start_tasks( $k, $h );
 
 }
+
+=over
+
+=item child_process
+
+=back
+
+TODO - add docs 
+
+=cut
 
 sub child_process {
 
@@ -347,6 +404,16 @@ sub child_process {
 	my $output = $filter->put( [ \%result ] );
 	print @$output;
 }
+
+=over
+
+=item handle_task_result
+
+=back
+
+TODO - add docs 
+
+=cut
 
 sub handle_task_result {
 	my ( $self, $a ) = @_;
@@ -399,10 +466,30 @@ sub handle_task_result {
 	  $result->{status};
 }
 
+=over
+
+=item handle_task_debug
+
+=back
+
+TODO - add docs 
+
+=cut
+
 sub handle_task_debug {
 	my ( $self, $result ) = @_;
 	print "Debug: $result\n";
 }
+
+=over
+
+=item handle_task_done
+
+=back
+
+TODO - add docs 
+
+=cut
 
 sub handle_task_done {
 	my ( $self, $k, $h, $task_id ) = @_;
@@ -428,6 +515,16 @@ sub handle_task_done {
 	delete $h->{task}->{$task_id};
 	$k->yield("next_task");
 }
+
+=over
+
+=item sig_child
+
+=back
+
+TODO - add docs 
+
+=cut
 
 sub sig_child {
 	my ( $heap, $sig, $pid, $exit_val ) = @_[ HEAP, ARG0, ARG1, ARG2 ];
