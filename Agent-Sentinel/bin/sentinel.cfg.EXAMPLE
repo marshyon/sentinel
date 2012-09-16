@@ -15,8 +15,7 @@ interval = 300
 # - these will be relative to the directory
 #   from which sentinel is invoked or else
 #   must be entered here as an absolute path
-status_file = sentinel_status_file
-status_direcory = data/status
+working_directory = /path/to/status_run_log_files
 
 # a process id file contains the running process id
 # and if not defined, defaults to the values below
@@ -25,34 +24,7 @@ status_direcory = data/status
 # sending signals such as KILL or HUP
 #
 pid_file_dir = /var/run/sentinel
-pid_file = senintel.pid
-
-# status files contain the current results
-# from each task
-#
-# updates are made each time a task completes
-#
-# formats for status file data to be created
-# * yml
-#   yet another markup ( YAML )
-# * json
-#   Javascript markup - often used by web
-#   applications
-# * xml
-#   Extensible Markup ( XML )
-# * tmpl
-#   for inclusion into other content, such as
-#   web pages and using a simple template file
-#   - see ./bin of this module  distribution 
-#     for an example of this
-#
-# sentinel will always create MLDBM status
-# files and uses this internally to record and
-# retreive status and configuration datas
-status_format = yml
-status_format = json
-status_format = xml
-status_format = tmpl
+pid_file = sentinel.pid
 
 # if daemon ( background ) mode is set, 
 # a user / group may be optionally defined
@@ -83,8 +55,6 @@ group = nobody
 # there can be zero or more extra plugin directories
 # like this but there must be at least 'Core'
 # 
-search = Core
-search = YourOwnPlugins
 
 # tasks are defined by section names that start with 
 # the string 'task ' followed by a number or word 
@@ -106,9 +76,9 @@ search = YourOwnPlugins
 #
 
 command = /usr/bin/some_other_command_or_script
-plugin = SystemCommand
+type = SystemCommand
 interval = 3
-description = this is the result of a sentinel run command [/usr/bin/some....]
+description = test task 1
 
 [task 2]
 
@@ -126,10 +96,10 @@ command = /home/jon/dev/sentinel/Agent-Sentinel/bin/test_command.pl
 args = -lirt
 args = /
 
-# each task *must* have a plugin allocated 
+# each task *must* have a plugin type  
 # see docs of this module for a full list of supported
-# plugins and how to add your own plugins
-plugin = SystemCommand
+# plugin types and how to add your own plugin type
+type = SystemCommand
 
 # each task has a time interval that defines the
 # time in seconds to wait between each run
