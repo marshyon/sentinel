@@ -1,4 +1,4 @@
-#!/home/jon/local/bin/perl -w
+#!/usr/bin/env perl	
 
 use strict;
 use lib '../lib';
@@ -7,10 +7,10 @@ $| = 1;
 
 use Data::Dumper;
 
-use Sentinel;
+use Agent::Sentinel;
 
-my $s = Sentinel->new( config_file => 'bin/sentinel.cfg' );
-$s->init_task_list();
+my $s =  Agent::Sentinel->new( config_file => 'sentinel.cfg' );
+$s->init();
 $s->run();
 
 print "debug is :: " . $s->debug() . "\n";
