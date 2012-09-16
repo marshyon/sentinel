@@ -95,7 +95,7 @@ sub init {
 	if ( ${ $self->cfg }{'main'}{'working_directory'} ) {
 		$working_dir = ${ $self->cfg }{'main'}{'working_directory'};
 	}
-	$working_dir = getcwd unless $working_dir;
+	$working_dir = $working_dir || getcwd;
 	chdir($working_dir);
 
 	$self->{'STACK'}->{'working_dir'} = "$working_dir/status.yaml";
